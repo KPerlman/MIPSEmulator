@@ -7,6 +7,11 @@
 #include "utils/heap.h"
 #include "elf_reader/elf_reader.h"
 
+// Function Prototypes
+uint32_t getRArguments(uint32_t CurrentInstruction);
+uint32_t getIArguments(uint32_t CurrentInstruction);
+uint32_t getJArguments(uint32_t CurrentInstruction);
+
 int main(int argc, char * argv[]) {
 
 	/*
@@ -77,7 +82,6 @@ int main(int argc, char * argv[]) {
 	/***************************/
 	/* ADD YOUR VARIABLES HERE */
 	/***************************/
-	
 
 	int i;
 	for(i = 0; i < MaxInstructions; i++) {
@@ -95,10 +99,14 @@ int main(int argc, char * argv[]) {
 		uint32_t opcode = (CurrentInstruction >> 26);
 
 		switch (opcode) {
-			case 0b000000: // R-type
-				// ADD, SUB, AND, OR, SLT, SLTU, SLL, SRL, SRA, JR, JALR
+			case 0b00000:
+				// R-type
+				uint32_t rs, rt, rd, shamt, funct;
+				rs, rt, rd, shamt, funct = getRArguments(CurrentInstruction);
 				break;
 		}
+
+		// J-type
 
 		RegFile[0] = 0;
 		// RegFile[#] is how you access a register #
@@ -111,4 +119,24 @@ int main(int argc, char * argv[]) {
 
 	return 0;
 
+}
+
+// Function Definitions
+uint32_t getRArguments(uint32_t CurrentInstruction) {
+	uint32_t rs = (CurrentInstruction << 6) >> 27;
+	uint32_t rt = (CurrentInstruction << 11) >> 27;
+	uint32_t rd = (CurrentInstruction << 16) >> 27;
+	uint32_t shamt = (CurrentInstruction << 21) >> 27;
+	uint32_t funct = (CurrentInstruction << 26) >> 26;
+	return rs, rt, rd, shamt, funct;
+}
+uint32_t getIArguments(uint32_t CurrentInstruction) {
+	uint32_t rs = (CurrentInstruction << 6) >> 27;
+	uint32_t rt = (CurrentInstruction << 11) >> 27;
+	uint32_t imm = (CurrentInstruction << 16) >> 27;
+	return rs, rt, imm;
+}
+uint32_t getJArguments(uint32_t CurrentInstruction) {
+	uint32_t addr = (CurrentInstruction << 6) >> 6;
+	return addr;
 }
