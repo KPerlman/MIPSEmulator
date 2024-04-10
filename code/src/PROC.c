@@ -7,9 +7,24 @@
 #include "utils/heap.h"
 #include "elf_reader/elf_reader.h"
 
+// Struct Definitions
+typedef struct {
+	uint32_t rs;
+	uint32_t rt;
+	uint32_t imm;
+} TypeI;
+
+typedef struct {
+	uint32_t rs;
+	uint32_t rt;
+	uint32_t rd;
+	uint32_t shamt;
+	uint32_t funct;
+} TypeR;
+
 // Function Prototypes
-uint32_t getRArguments(uint32_t CurrentInstruction);
-uint32_t getIArguments(uint32_t CurrentInstruction);
+TypeR getRArguments(uint32_t CurrentInstruction);
+TypeI getIArguments(uint32_t CurrentInstruction);
 uint32_t getJArguments(uint32_t CurrentInstruction);
 
 int main(int argc, char * argv[]) {
@@ -101,9 +116,7 @@ int main(int argc, char * argv[]) {
 		switch (opcode) {
 			case 0b00000:
 				// R-type
-				uint32_t rs, rt, rd, shamt, funct;
-				rs, rt, rd, shamt, funct = getRArguments(CurrentInstruction);
-				break;
+				TypeR RArgs = getRArguments(CurrentInstruction);
 		}
 
 		// J-type
@@ -122,19 +135,21 @@ int main(int argc, char * argv[]) {
 }
 
 // Function Definitions
-uint32_t getRArguments(uint32_t CurrentInstruction) {
-	uint32_t rs = (CurrentInstruction << 6) >> 27;
-	uint32_t rt = (CurrentInstruction << 11) >> 27;
-	uint32_t rd = (CurrentInstruction << 16) >> 27;
-	uint32_t shamt = (CurrentInstruction << 21) >> 27;
-	uint32_t funct = (CurrentInstruction << 26) >> 26;
-	return rs, rt, rd, shamt, funct;
+TypeR getRArguments(uint32_t CurrentInstruction) {
+	TypeR result;
+	result.rs = (CurrentInstruction << 6) >> 27;
+	result.rt = (CurrentInstruction << 11) >> 27;
+	result.rd = (CurrentInstruction << 16) >> 27;
+	result.shamt = (CurrentInstruction << 21) >> 27;
+	result.funct = (CurrentInstruction << 26) >> 26;
+	return result;
 }
-uint32_t getIArguments(uint32_t CurrentInstruction) {
-	uint32_t rs = (CurrentInstruction << 6) >> 27;
-	uint32_t rt = (CurrentInstruction << 11) >> 27;
-	uint32_t imm = (CurrentInstruction << 16) >> 27;
-	return rs, rt, imm;
+TypeI getIArguments(uint32_t CurrentInstruction) {
+	TypeI result;
+	result.rs = (CurrentInstruction << 6) >> 27;
+	result.rt = (CurrentInstruction << 11) >> 27;
+	result.imm = (CurrentInstruction << 16) >> 27;
+	return result;
 }
 uint32_t getJArguments(uint32_t CurrentInstruction) {
 	uint32_t addr = (CurrentInstruction << 6) >> 6;
