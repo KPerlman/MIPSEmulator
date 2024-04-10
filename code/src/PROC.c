@@ -23,9 +23,9 @@ typedef struct {
 } TypeR;
 
 // Function Prototypes
-TypeR getRArguments(uint32_t CurrentInstruction);
-TypeI getIArguments(uint32_t CurrentInstruction);
-uint32_t getJArguments(uint32_t CurrentInstruction);
+TypeR readTypeR(uint32_t CurrentInstruction);
+TypeI readTypeI(uint32_t CurrentInstruction);
+uint32_t readTypeJ(uint32_t CurrentInstruction);
 
 int main(int argc, char * argv[]) {
 
@@ -113,13 +113,15 @@ int main(int argc, char * argv[]) {
 
 		uint32_t opcode = (CurrentInstruction >> 26);
 
-		switch (opcode) {
-			case 0b00000:
-				// R-type
-				TypeR RArgs = getRArguments(CurrentInstruction);
-		}
+		if (opcode == 0b000000) { // ADD
+            TypeR vals = readTypeR(CurrentInstruction);
+            // Sign extension
+            int32_t rs_val = (int32_t)RegFile[vals.rs];  
+            int32_t rt_val = (int32_t)RegFile[vals.rt];  
+            int32_t result = rs_val + rt_val;      
+            RegFile[vals.rd] = (uint32_t)result;        
+        }
 
-		// J-type
 
 		RegFile[0] = 0;
 		// RegFile[#] is how you access a register #
@@ -135,23 +137,25 @@ int main(int argc, char * argv[]) {
 }
 
 // Function Definitions
-TypeR getRArguments(uint32_t CurrentInstruction) {
-	TypeR result;
-	result.rs = (CurrentInstruction << 6) >> 27;
-	result.rt = (CurrentInstruction << 11) >> 27;
-	result.rd = (CurrentInstruction << 16) >> 27;
-	result.shamt = (CurrentInstruction << 21) >> 27;
-	result.funct = (CurrentInstruction << 26) >> 26;
-	return result;
+TypeI readTypeI(uint32_t instruction) {
+    TypeI result;
+    result.rs = (instruction >> 21) & 0x1F;
+    result.rt = (instruction >> 16) & 0x1F;
+    result.imm = instruction & 0xFFFF;
+    return result;
 }
-TypeI getIArguments(uint32_t CurrentInstruction) {
-	TypeI result;
-	result.rs = (CurrentInstruction << 6) >> 27;
-	result.rt = (CurrentInstruction << 11) >> 27;
-	result.imm = (CurrentInstruction << 16) >> 27;
-	return result;
+
+TypeR readTypeR(uint32_t instruction) {
+    TypeR result;
+    result.rs = (instruction >> 21) & 0x1F;
+    result.rt = (instruction >> 16) & 0x1F;
+    result.rd = (instruction >> 11) & 0x1F;
+    result.shamt = (instruction >> 6) & 0x1F;
+    result.funct = instruction & 0x3F;
+    return result;
 }
-uint32_t getJArguments(uint32_t CurrentInstruction) {
+
+uint32_t readTypeJ(uint32_t CurrentInstruction) {
 	uint32_t addr = (CurrentInstruction << 6) >> 6;
 	return addr;
 }
