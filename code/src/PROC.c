@@ -27,6 +27,7 @@ typedef struct {
 } TypeJ;
 
 // Function prototypes
+void printCurrentInstruction(uint32_t instruction);
 TypeI readTypeI(uint32_t instruction);
 TypeR readTypeR(uint32_t instruction);
 TypeJ readTypeJ(uint32_t instruction);
@@ -102,14 +103,16 @@ int main(int argc, char * argv[]) {
 	/***************************/
 	/* ADD YOUR VARIABLES HERE */
 	/***************************/
-	
+	uint64_t result64;
+	int32_t rs_signed;
+	int32_t rt_signed;
 
 	int i;
+	int j;
 	for(i = 0; i < MaxInstructions; i++) {
 
 		//FETCH THE INSTRUCTION AT 'ProgramCounter'		
 		CurrentInstruction = readWord(ProgramCounter,false);
-		//CurrentInstruction = 0b00100100000000010000000000000110;
 
 		//PRINT CONTENTS OF THE REGISTER FILE	
 		printRegFile();
@@ -119,6 +122,8 @@ int main(int argc, char * argv[]) {
 		/********************************/
 
 		uint32_t opcode = (CurrentInstruction >> 26);
+
+		printCurrentInstruction(CurrentInstruction);
 
 		
 		/********************************/
@@ -276,70 +281,57 @@ int main(int argc, char * argv[]) {
 			uint32_t imm_upper = (vals.imm & 0xFFFF) << 16;
 			RegFile[vals.rt] = imm_upper;
 		}
-
-		/********************************/
-		/*  	Multiply and Divide     */
-		/********************************/
-
-		if (opcode == 0b010000) // mfhi (Move from HI)
+		//////////////
+		// Big Chungus
+		//////////////
+		if (opcode == 0b000000)
 		{
+			// Multiplication and Division //
+			/////////////////////////////////
 			TypeR vals = readTypeR(CurrentInstruction);
-			RegFile[vals.rd] = RegFile[32];
-		}
 
-		if (opcode == 0b010010) // mflo (Move from LO)
-		{
-			TypeR vals = readTypeR(CurrentInstruction);
-			RegFile[vals.rd] = RegFile[33];
-		}
-
-		if (opcode == 0b010001) // mthi (Move to HI)
-		{
-			TypeR vals = readTypeR(CurrentInstruction);
-			RegFile[32] = RegFile[vals.rs];
-		}
-
-		if (opcode == 0b010011) // mtlo (Move to LO)
-		{
-			TypeR vals = readTypeR(CurrentInstruction);
-			RegFile[33] = RegFile[vals.rs];
-		}
-
-		if (opcode == 0b011000) // mult (Multiply)
-		{
-			TypeR vals = readTypeR(CurrentInstruction);
-			int64_t result = (int64_t)((int32_t)RegFile[vals.rs]) * (int64_t)((int32_t)RegFile[vals.rt]);
-			RegFile[32] = (uint32_t)(result >> 32);
-			RegFile[33] = (uint32_t)(result & 0xFFFFFFFF);
-		}
-
-		if (opcode == 0b011001) // multu (Multiply unsigned)
-		{
-			TypeR vals = readTypeR(CurrentInstruction);
-			uint64_t result = (uint64_t)RegFile[vals.rs] * (uint64_t)RegFile[vals.rt];
-			RegFile[32] = (uint32_t)(result >> 32);
-			RegFile[33] = (uint32_t)(result & 0xFFFFFFFF);
-		}
-
-		if (opcode == 0b011010) // div (Divide)
-		{
-			TypeR vals = readTypeR(CurrentInstruction);
-			int32_t rs_signed = (int32_t)RegFile[vals.rs];
-			int32_t rt_signed = (int32_t)RegFile[vals.rt];
-			if (rt_signed != 0)
+			switch (vals.funct)
 			{
-				RegFile[32] = (uint32_t)(rs_signed / rt_signed);
-				RegFile[33] = (uint32_t)(rs_signed % rt_signed);
-			}
-		}
-
-		if (opcode == 0b011011) // divu (Divide unsigned)
-		{
-			TypeR vals = readTypeR(CurrentInstruction);
-			if (RegFile[vals.rt] != 0)
-			{
-				RegFile[32] = RegFile[vals.rs] / RegFile[vals.rt];
-				RegFile[33] = RegFile[vals.rs] % RegFile[vals.rt];
+				case 0b010000: // mfhi (Move from HI)
+					RegFile[vals.rd] = RegFile[32];
+					break;
+				case 0b010010: // mflo (Move from LO)
+					RegFile[vals.rd] = RegFile[33];
+					break;
+				case 0b010001 : // mthi (Move to HI)
+					RegFile[32] = RegFile[vals.rs];
+					break;
+				case 0b010011 : // mtlo (Move to LO)
+					RegFile[33] = RegFile[vals.rs];
+					break;
+				case 0b011000: // mult (Multiply)
+					result64 = (int64_t)((int32_t)RegFile[vals.rs]) * (int64_t)((int32_t)RegFile[vals.rt]);
+					RegFile[32] = (uint32_t)(result64 >> 32);
+					RegFile[33] = (uint32_t)(result64 & 0xFFFFFFFF);
+					break;
+				case 0b011001: // multu (Multiply unsigned)
+					result64 = (uint64_t)RegFile[vals.rs] * (uint64_t)RegFile[vals.rt];
+					RegFile[32] = (uint32_t)(result64 >> 32);
+					RegFile[33] = (uint32_t)(result64 & 0xFFFFFFFF);
+					break;
+				case 0b011010: // div (Divide)
+					rs_signed = (int32_t)RegFile[vals.rs];
+					rt_signed = (int32_t)RegFile[vals.rt];
+					if (rt_signed != 0)
+					{
+						RegFile[32] = (uint32_t)(rs_signed / rt_signed);
+						RegFile[33] = (uint32_t)(rs_signed % rt_signed);
+					}
+					break;
+				case 0b011011: // divu (Divide unsigned)
+					if (RegFile[vals.rt] != 0)
+					{
+						RegFile[32] = RegFile[vals.rs] / RegFile[vals.rt];
+						RegFile[33] = RegFile[vals.rs] % RegFile[vals.rt];
+					}
+					break;
+				default:
+					break;
 			}
 		}
 
@@ -354,6 +346,14 @@ int main(int argc, char * argv[]) {
 
 	return 0;
 
+}
+
+void printCurrentInstruction(uint32_t instruction) {
+    printf("Current Instruction: ");
+    for (int j = 31; j >= 0; --j) {
+        printf("%d", (instruction >> j) & 1); // Extracting individual bit and printing
+    }
+    printf("\n");
 }
 
 //Function Definitions
