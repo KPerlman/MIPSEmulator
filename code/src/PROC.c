@@ -27,7 +27,6 @@ typedef struct {
 } TypeJ;
 
 // Function prototypes
-void printCurrentInstruction(uint32_t instruction);
 TypeI readTypeI(uint32_t instruction);
 TypeR readTypeR(uint32_t instruction);
 TypeJ readTypeJ(uint32_t instruction);
@@ -100,15 +99,19 @@ int main(int argc, char * argv[]) {
 	fflush(stdout);
 	ProgramCounter = exec.GPC_START;
 	
-	/***************************/
-	/* ADD YOUR VARIABLES HERE */
-	/***************************/
+	//DECLARE VARIABLES FOR INSTRUCTION EXECUTION
+	int32_t result;
 	uint64_t result64;
 	int32_t rs_signed;
 	int32_t rt_signed;
+	int32_t imm_signed;
+	int32_t imm_ext;
+	uint32_t imm_upper;
+	TypeR valsR;
+	TypeI valsI;
+	TypeJ valsJ;
 
 	int i;
-	int j;
 	for(i = 0; i < MaxInstructions; i++) {
 
 		//FETCH THE INSTRUCTION AT 'ProgramCounter'		
@@ -116,207 +119,225 @@ int main(int argc, char * argv[]) {
 
 		//PRINT CONTENTS OF THE REGISTER FILE	
 		printRegFile();
-		
-		/********************************/
-		/* ADD YOUR IMPLEMENTATION HERE */
-		/********************************/
 
 		uint32_t opcode = (CurrentInstruction >> 26);
-
-		printCurrentInstruction(CurrentInstruction);
-
-		
-		/********************************/
-		/* 	     	ALU Instructions	 */
-		/********************************/
-
 		
 		if (opcode == 0b000000) { //add
-			TypeR vals = readTypeR(CurrentInstruction);
+			valsR = readTypeR(CurrentInstruction);
 			// Sign extension
-			int32_t rs_signed = (int32_t)RegFile[vals.rs];  
-			int32_t rt_signed = (int32_t)RegFile[vals.rt];  
+			rs_signed = (int32_t)RegFile[valsR.rs];  
+			rt_signed = (int32_t)RegFile[valsR.rt];  
 			//rd = rs + rt
-			int32_t result = rs_signed + rt_signed;       
-			RegFile[vals.rd] = (uint32_t)result;        
-		}
-		
-		if (opcode == 0b001001){ //add immediate unsigned
-			TypeI vals = readTypeI(CurrentInstruction);
+			result = rs_signed + rt_signed;       
+			RegFile[valsR.rd] = (uint32_t)result;        
+		} if (opcode == 0b001001){ //add immediate unsigned
+			valsI = readTypeI(CurrentInstruction);
 			//rt = rs + immediate
-			RegFile[vals.rt] = RegFile[vals.rs] + vals.imm;
-		}
-
-		if (opcode == 0b001000){ //add immediate (signed)
-			TypeI vals = readTypeI(CurrentInstruction);
+			RegFile[valsI.rt] = RegFile[valsI.rs] + valsI.imm;
+		} if (opcode == 0b001000){ //add immediate (signed)
+			printf("ADDI\n");
+			valsI = readTypeI(CurrentInstruction);
 			//Sign extension
-			int32_t rs_signed = (int32_t)RegFile[vals.rs];  
-			int32_t imm_signed = (int32_t)(int16_t)vals.imm;  
-			int32_t result = rs_signed + imm_signed;
-			//rt = rs + immediate
-    		RegFile[vals.rt] = (uint32_t)result;
-		}
-
-		
-		if (opcode == 0b100010) { //subtract
-			TypeR vals = readTypeR(CurrentInstruction); 
+			rs_signed = (int32_t)RegFile[valsI.rs];  
+			imm_signed = (int32_t)(int16_t)valsI.imm;  
+			result = rs_signed + imm_signed;
+    		RegFile[valsI.rt] = (uint32_t)result;
+		} if (opcode == 0b100010) { //subtract
+			valsR = readTypeR(CurrentInstruction); 
 			// Sign extension
-			int32_t rs_signed = (int32_t)RegFile[vals.rs];  
-			int32_t rt_signed = (int32_t)RegFile[vals.rt];  
-			int32_t result = rs_signed - rt_signed;    
+			rs_signed = (int32_t)RegFile[valsR.rs];  
+			rt_signed = (int32_t)RegFile[valsR.rt];  
+			result = rs_signed - rt_signed;    
 			//rd = rs - rt   
-			RegFile[vals.rd] = (uint32_t)result;        
-		}
-
-		
-		if (opcode == 0b100011){ //subtract unsigned
-			TypeR vals = readTypeR(CurrentInstruction);
+			RegFile[valsR.rd] = (uint32_t)result;        
+		} if (opcode == 0b100011){ //subtract unsigned
+			valsR = readTypeR(CurrentInstruction);
 			// rd = rs - rt
-			RegFile[vals.rd] = RegFile[vals.rs] - RegFile[vals.rt];
-			
-		}
-
-		if (opcode == 0b100001){ //add unsigned
-			TypeR vals = readTypeR(CurrentInstruction);
+			RegFile[valsR.rd] = RegFile[valsR.rs] - RegFile[valsR.rt];	
+		} if (opcode == 0b100001){ //add unsigned
+			valsR = readTypeR(CurrentInstruction);
 			// rd = rs + rt
-			RegFile[vals.rd] = RegFile[vals.rs] + RegFile[vals.rt];
-		}
-		
-
-		
-		if (opcode ==0b100100){//AND
-			TypeR vals = readTypeR(CurrentInstruction); 
-			RegFile[vals.rd] = RegFile[vals.rs] & RegFile[vals.rt];
-		}
-
-		
-		if (opcode == 0b100101) {//OR
-			TypeR vals = readTypeR(CurrentInstruction);
-			RegFile[vals.rd] = RegFile[vals.rs] | RegFile[vals.rt];
-		}
-
-		
-		if (opcode == 0b100110) { //XOR
-			TypeR vals = readTypeR(CurrentInstruction);
-			RegFile[vals.rd] = RegFile[vals.rs] ^ RegFile[vals.rt];
-		}
-
-		if (opcode == 0b100111) { // NOR
-			TypeR vals = readTypeR(CurrentInstruction);
-			RegFile[vals.rd] = ~(RegFile[vals.rs] | RegFile[vals.rt]);
-		}
-
-		if (opcode == 0b101010) { // Set Less Than (signed)
-			TypeR vals = readTypeR(CurrentInstruction);
+			RegFile[valsR.rd] = RegFile[valsR.rs] + RegFile[valsR.rt];
+		} if (opcode ==0b100100){ //AND
+			valsR = readTypeR(CurrentInstruction); 
+			RegFile[valsR.rd] = RegFile[valsR.rs] & RegFile[valsR.rt];
+		} if (opcode == 0b100101) {//OR
+			valsR = readTypeR(CurrentInstruction);
+			RegFile[valsR.rd] = RegFile[valsR.rs] | RegFile[valsR.rt];
+		} if (opcode == 0b100110) { //XOR
+			valsR = readTypeR(CurrentInstruction);
+			RegFile[valsR.rd] = RegFile[valsR.rs] ^ RegFile[valsR.rt];
+		} if (opcode == 0b100111) { // NOR
+			valsR = readTypeR(CurrentInstruction);
+			RegFile[valsR.rd] = ~(RegFile[valsR.rs] | RegFile[valsR.rt]);
+		} if (opcode == 0b101010) { // Set Less Than (signed)
+			valsR = readTypeR(CurrentInstruction);
 			//Sign extension
-			int32_t rs_signed = (int32_t)RegFile[vals.rs];
-			int32_t rt_signed = (int32_t)RegFile[vals.rt];
-
+			rs_signed = (int32_t)RegFile[valsR.rs];
+			rt_signed = (int32_t)RegFile[valsR.rt];
 			if (rs_signed < rt_signed) {
-				RegFile[vals.rd] = 1;
+				RegFile[valsR.rd] = 1;
 			} else {
-				RegFile[vals.rd] = 0;
+				RegFile[valsR.rd] = 0;
 			}
-		}
-
-		if (opcode == 0b101011) { // Set Less than unsigned
-			TypeR vals = readTypeR(CurrentInstruction);
-			if (RegFile[vals.rs] < RegFile[vals.rt]){
-				RegFile[vals.rd] = 1;
+		} if (opcode == 0b101011) { //sltu (Set Less than unsigned)
+			valsR = readTypeR(CurrentInstruction);
+			if (RegFile[valsR.rs] < RegFile[valsR.rt]){
+				RegFile[valsR.rd] = 1;
 			}else{
-				RegFile[vals.rd] = 0;
+				RegFile[valsR.rd] = 0;
 			}
-		}
-
-		if (opcode == 0b001010){ //slti (set less than immediate)
-			TypeI vals = readTypeI(CurrentInstruction);
+		} if (opcode == 0b001010){ //slti (set less than immediate)
+			valsI = readTypeI(CurrentInstruction);
 			//Sign extension
-			int32_t rs_signed = (int32_t)RegFile[vals.rs];
-			int32_t imm_signed = (int32_t)(int16_t)vals.imm;
-			if (rs_signed < vals.imm){
-				RegFile[vals.rt] = 1;
+			rs_signed = (int32_t)RegFile[valsI.rs];
+			imm_signed = (int32_t)(int16_t)valsI.imm;
+			if (rs_signed < valsI.imm){
+				RegFile[valsI.rt] = 1;
 			}else{
-				RegFile[vals.rt] = 0;
+				RegFile[valsI.rt] = 0;
 			
 			}
-		}
-
-		if (opcode == 0b001011) { // sltiu (Set Less than unsigned immediate)
-			TypeI vals = readTypeI(CurrentInstruction);
-			if (RegFile[vals.rs] < vals.imm){
-				RegFile[vals.rt] = 1;
+		} if (opcode == 0b001011) { //sltiu (Set Less than unsigned immediate)
+			valsI = readTypeI(CurrentInstruction);
+			if (RegFile[valsI.rs] < valsI.imm){
+				RegFile[valsI.rt] = 1;
 			}else{
-				RegFile[vals.rt] = 0;
+				RegFile[valsI.rt] = 0;
 			}
-		}
-
-		if (opcode == 0b001000) { // andi (And Immediate)
-			TypeI vals = readTypeI(CurrentInstruction); 
+		} if (opcode == 0b001000) { //andi (And Immediate)
+			valsI = readTypeI(CurrentInstruction); 
 			// Zero-Extend to 32 bits
-			int32_t imm_ext = (int32_t)vals.imm;
+			imm_ext = (int32_t)valsI.imm;
 			//rt is bitwise and between rs and immediate
-			RegFile[vals.rt] = RegFile[vals.rs] & imm_ext;
-		}
-
-		if (opcode == 0b001101) { // ori (or Immediate)
-			TypeI vals = readTypeI(CurrentInstruction); 
+			RegFile[valsI.rt] = RegFile[valsI.rs] & imm_ext;
+		} if (opcode == 0b001101) { //ori (or Immediate)
+			valsI = readTypeI(CurrentInstruction); 
 			// Zero-Extend to 32 bits
-			int32_t imm_ext = (int32_t)vals.imm;
+			imm_ext = (int32_t)valsI.imm;
 			//rt is bitwise or between rs and immediate
-			RegFile[vals.rt] = RegFile[vals.rs] | imm_ext;
-		}
-
-		if (opcode == 0b001110) { // xori (exclusive or Immediate)
-			TypeI vals = readTypeI(CurrentInstruction); 
+			RegFile[valsI.rt] = RegFile[valsI.rs] | imm_ext;
+		} if (opcode == 0b001110) { //xori (exclusive or Immediate)
+			valsI = readTypeI(CurrentInstruction); 
 			// Zero-Extend to 32 bits
-			int32_t imm_ext = (int32_t)vals.imm;
+			imm_ext = (int32_t)valsI.imm;
 			//rt is bitwise xor between rs and immediate
-			RegFile[vals.rt] = RegFile[vals.rs] ^ imm_ext;
-		}
-
-		if (opcode == 0b001111) { // lui (Load Upper Immediate)
-			TypeI vals = readTypeI(CurrentInstruction); 
-
+			RegFile[valsI.rt] = RegFile[valsI.rs] ^ imm_ext;
+		} if (opcode == 0b001111) { //lui (Load Upper Immediate)
+			valsI = readTypeI(CurrentInstruction); 
 			// Extract upper 16 bits of the immediate value and left-shift it by 16 bits
-			uint32_t imm_upper = (vals.imm & 0xFFFF) << 16;
-			RegFile[vals.rt] = imm_upper;
+			imm_upper = (valsI.imm & 0xFFFF) << 16;
+			RegFile[valsI.rt] = imm_upper;
 		}
-		//////////////
-		// Big Chungus
-		//////////////
+
+		// R TYPE INSTRUCTIONS
 		if (opcode == 0b000000)
 		{
-			// Multiplication and Division //
-			/////////////////////////////////
-			TypeR vals = readTypeR(CurrentInstruction);
-
-			switch (vals.funct)
+			valsR = readTypeR(CurrentInstruction);
+			switch (valsR.funct)
 			{
+				// ALU INSTRUCTIONS
+                case 0b100000: //add
+                    rs_signed = (int32_t)RegFile[valsR.rs];  
+                    rt_signed = (int32_t)RegFile[valsR.rt];  
+                    //rd = rs + rt
+                    result = rs_signed + rt_signed;      
+                    RegFile[valsR.rd] = (uint32_t)result;  
+                    break;
+                case 0b100010: //subtract
+                    // Sign extension
+                    rs_signed = (int32_t)RegFile[valsR.rs];  
+                    rt_signed = (int32_t)RegFile[valsR.rt];  
+                    result = rs_signed - rt_signed;    
+                    //rd = rs - rt  
+                    RegFile[valsR.rd] = (uint32_t)result;
+                    break;
+                case 0b100011: //subtract unsigned
+                    // rd = rs - rt
+                    RegFile[valsR.rd] = RegFile[valsR.rs] - RegFile[valsR.rt];
+                    break;
+                case 0b100001: //add unsigned
+                    // rd = rs + rt
+                    RegFile[valsR.rd] = RegFile[valsR.rs] + RegFile[valsR.rt];
+                    break;
+                case 0b100100://AND
+                    RegFile[valsR.rd] = RegFile[valsR.rs] & RegFile[valsR.rt];
+                    break;
+                case 0b100101://OR
+                    RegFile[valsR.rd] = RegFile[valsR.rs] | RegFile[valsR.rt];
+                    break;      
+                case 0b100110: //XOR (exclusive or)
+                    //rd is bitwise xor of rs and rt
+                    RegFile[valsR.rd] = RegFile[valsR.rs] ^ RegFile[valsR.rt];
+                    break;
+                case 0b100111: // NOR
+                    //rd is bitwise nor of rs and rt
+                    RegFile[valsR.rd] = ~(RegFile[valsR.rs] | RegFile[valsR.rt]);
+                    break;
+                case 0b101010: // Set Less Than (signed)
+                    //Sign extension
+                    rs_signed = (int32_t)RegFile[valsR.rs];
+                    rt_signed = (int32_t)RegFile[valsR.rt];
+                    if (rs_signed < rt_signed) {
+                        RegFile[valsR.rd] = 1;
+                    } else {
+                        RegFile[valsR.rd] = 0;
+                    }
+                    break;
+                case 0b101011: // Set Less Than (unsigned)
+                    if (RegFile[valsR.rs] < RegFile[valsR.rt]){
+                        RegFile[valsR.rd] = 1;
+                    }else{
+                        RegFile[valsR.rd] = 0;
+                    }
+                    break;
+
+				// SHIFT INSTRUCTIONS
+                case 0b000000: //sll (shift left logical)
+                    RegFile[valsR.rd] = RegFile[valsR.rt] << valsR.shamt;
+                    break;
+                case 0b000010: //srl (shift right logical)
+                    RegFile[valsR.rd] = RegFile[valsR.rt] >> valsR.shamt;
+                    break;
+                case 0b000011: //sra (shift right arithmetic)
+                    RegFile[valsR.rd] = (int32_t)RegFile[valsR.rt] >> valsR.shamt;
+                    break;
+                case 0b000100: //sllv (shift left logical variable)
+                    RegFile[valsR.rd] = RegFile[valsR.rt] >> RegFile[valsR.rs];
+                    break;
+                case 0b000110: // srlv (shift right logical variable)
+                    RegFile[valsR.rd] = RegFile[valsR.rt] >> RegFile[valsR.rs];
+                    break;
+                case 0b000111: // srav (shift right arithmetic variable)
+                    RegFile[valsR.rd] = (int32_t)RegFile[valsR.rt] >> RegFile[valsR.rs];
+                    break;                  
+
+				// MULT/DIV INSTRUCTIONS
 				case 0b010000: // mfhi (Move from HI)
-					RegFile[vals.rd] = RegFile[32];
+					RegFile[valsR.rd] = RegFile[32];
 					break;
 				case 0b010010: // mflo (Move from LO)
-					RegFile[vals.rd] = RegFile[33];
+					RegFile[valsR.rd] = RegFile[33];
 					break;
 				case 0b010001 : // mthi (Move to HI)
-					RegFile[32] = RegFile[vals.rs];
+					RegFile[32] = RegFile[valsR.rs];
 					break;
 				case 0b010011 : // mtlo (Move to LO)
-					RegFile[33] = RegFile[vals.rs];
+					RegFile[33] = RegFile[valsR.rs];
 					break;
 				case 0b011000: // mult (Multiply)
-					result64 = (int64_t)((int32_t)RegFile[vals.rs]) * (int64_t)((int32_t)RegFile[vals.rt]);
+					result64 = (int64_t)((int32_t)RegFile[valsR.rs]) * (int64_t)((int32_t)RegFile[valsR.rt]);
 					RegFile[32] = (uint32_t)(result64 >> 32);
 					RegFile[33] = (uint32_t)(result64 & 0xFFFFFFFF);
 					break;
 				case 0b011001: // multu (Multiply unsigned)
-					result64 = (uint64_t)RegFile[vals.rs] * (uint64_t)RegFile[vals.rt];
+					result64 = (uint64_t)RegFile[valsR.rs] * (uint64_t)RegFile[valsR.rt];
 					RegFile[32] = (uint32_t)(result64 >> 32);
 					RegFile[33] = (uint32_t)(result64 & 0xFFFFFFFF);
 					break;
 				case 0b011010: // div (Divide)
-					rs_signed = (int32_t)RegFile[vals.rs];
-					rt_signed = (int32_t)RegFile[vals.rt];
+					rs_signed = (int32_t)RegFile[valsR.rs];
+					rt_signed = (int32_t)RegFile[valsR.rt];
 					if (rt_signed != 0)
 					{
 						RegFile[32] = (uint32_t)(rs_signed / rt_signed);
@@ -324,10 +345,10 @@ int main(int argc, char * argv[]) {
 					}
 					break;
 				case 0b011011: // divu (Divide unsigned)
-					if (RegFile[vals.rt] != 0)
+					if (RegFile[valsR.rt] != 0)
 					{
-						RegFile[32] = RegFile[vals.rs] / RegFile[vals.rt];
-						RegFile[33] = RegFile[vals.rs] % RegFile[vals.rt];
+						RegFile[32] = RegFile[valsR.rs] / RegFile[valsR.rt];
+						RegFile[33] = RegFile[valsR.rs] % RegFile[valsR.rt];
 					}
 					break;
 				default:
@@ -346,14 +367,6 @@ int main(int argc, char * argv[]) {
 
 	return 0;
 
-}
-
-void printCurrentInstruction(uint32_t instruction) {
-    printf("Current Instruction: ");
-    for (int j = 31; j >= 0; --j) {
-        printf("%d", (instruction >> j) & 1); // Extracting individual bit and printing
-    }
-    printf("\n");
 }
 
 //Function Definitions
