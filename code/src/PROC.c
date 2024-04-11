@@ -32,6 +32,11 @@ TypeR readTypeR(uint32_t instruction);
 TypeJ readTypeJ(uint32_t instruction);
 
 
+
+
+
+
+
 int main(int argc, char * argv[]) {
 
 	/*
@@ -99,14 +104,12 @@ int main(int argc, char * argv[]) {
 	fflush(stdout);
 	ProgramCounter = exec.GPC_START;
 	
-	//DECLARE VARIABLES FOR INSTRUCTION EXECUTION
-	int32_t result;
-	uint64_t result64;
-	int32_t rs_signed;
-	int32_t rt_signed;
-	int32_t imm_signed;
-	int32_t imm_ext;
-	uint32_t imm_upper;
+	/***************************/
+	/* ADD YOUR VARIABLES HERE */
+	/***************************/
+	uint64_t result;
+    int32_t rs_signed;
+    int32_t rt_signed;
 	TypeR valsR;
 	TypeI valsI;
 	TypeJ valsJ;
@@ -119,247 +122,319 @@ int main(int argc, char * argv[]) {
 
 		//PRINT CONTENTS OF THE REGISTER FILE	
 		printRegFile();
+		
+		/********************************/
+		/* ADD YOUR IMPLEMENTATION HERE */
+		/********************************/
+
 
 		uint32_t opcode = (CurrentInstruction >> 26);
 		
-		if (opcode == 0b000000) { //add
-			valsR = readTypeR(CurrentInstruction);
-			// Sign extension
-			rs_signed = (int32_t)RegFile[valsR.rs];  
-			rt_signed = (int32_t)RegFile[valsR.rt];  
-			//rd = rs + rt
-			result = rs_signed + rt_signed;       
-			RegFile[valsR.rd] = (uint32_t)result;        
-		} if (opcode == 0b001001){ //add immediate unsigned
-			valsI = readTypeI(CurrentInstruction);
+		//Decode instruction for all types of instructions. Only use the relevant type for each instruction
+		valsR = readTypeR(CurrentInstruction);
+		valsI = readTypeI(CurrentInstruction);
+		valsJ = readTypeJ(CurrentInstruction);
+		
+
+
+		if (opcode == 0b000000) { //R type instructions
+
+			switch(valsR.funct)
+			{
+			  ///////////////////////////
+			 /*R TYPE ALU INSTRUCTIONS*/
+			///////////////////////////
+				case 0b100000: //add
+					int32_t rs_signed = (int32_t)RegFile[valsR.rs];  
+					int32_t rt_signed = (int32_t)RegFile[valsR.rt];  
+					//rd = rs + rt
+					int32_t result = rs_signed + rt_signed;       
+					RegFile[valsR.rd] = (uint32_t)result;   
+					break;
+
+				case 0b100010: //subtract
+					// Sign extension
+					int32_t rs_signed = (int32_t)RegFile[valsR.rs];  
+					int32_t rt_signed = (int32_t)RegFile[valsR.rt];  
+					int32_t result = rs_signed - rt_signed;    
+					//rd = rs - rt   
+					RegFile[valsR.rd] = (uint32_t)result;
+					break;
+		
+				case 0b100011: //subtract unsigned
+					// rd = rs - rt
+					RegFile[valsR.rd] = RegFile[valsR.rs] - RegFile[valsR.rt];
+					break;
+
+				case 0b100001: //add unsigned
+					// rd = rs + rt
+					RegFile[valsR.rd] = RegFile[valsR.rs] + RegFile[valsR.rt];
+					break;
+
+				case 0b100100://AND
+					RegFile[valsR.rd] = RegFile[valsR.rs] & RegFile[valsR.rt];
+					break;
+
+				case 0b100101://OR
+					RegFile[valsR.rd] = RegFile[valsR.rs] | RegFile[valsR.rt];
+					break;		
+			
+				case 0b100110: //XOR (exclusive or)
+					//rd is bitwise xor of rs and rt
+					RegFile[valsR.rd] = RegFile[valsR.rs] ^ RegFile[valsR.rt];
+					break;
+
+				case 0b100111: // NOR
+					//rd is bitwise nor of rs and rt
+					RegFile[valsR.rd] = ~(RegFile[valsR.rs] | RegFile[valsR.rt]);
+					break;
+
+				case 0b101010: // Set Less Than (signed)
+			
+					//Sign extension
+					int32_t rs_signed = (int32_t)RegFile[valsR.rs];
+					int32_t rt_signed = (int32_t)RegFile[valsR.rt];
+
+					if (rs_signed < rt_signed) {
+						RegFile[valsR.rd] = 1;
+					} else {
+						RegFile[valsR.rd] = 0;
+					}
+					break;
+		
+				case 0b101011: // Set Less than unsigned
+					if (RegFile[valsR.rs] < RegFile[valsR.rt]){
+						RegFile[valsR.rd] = 1;
+					}else{
+						RegFile[valsR.rd] = 0;
+					}
+					break;
+		
+
+			  ///////////////////////////
+			 /*   Shift Instructions  */
+			///////////////////////////
+
+
+				case 0b000000: //sll (shift left logical)
+					RegFile[valsR.rd] = RegFile[valsR.rt] << valsR.shamt;
+					break;
+
+				case 0b000010: //srl (shift right logical)
+					RegFile[valsR.rd] = RegFile[valsR.rt] >> valsR.shamt;
+					break;
+				
+				case 0b000011: //sra (shift right arithmetic)
+					RegFile[valsR.rd] = (int32_t)RegFile[valsR.rt] >> valsR.shamt;
+					break;
+
+				case 0b000100: //sllv (shift left logical variable)
+					RegFile[valsR.rd] = RegFile[valsR.rt] >> RegFile[valsR.rs];
+					break;
+
+				case 0b000110: // srlv (shift right logical variable)
+					RegFile[valsR.rd] = RegFile[valsR.rt] >> RegFile[valsR.rs];
+					break;
+
+				case 0b000111: // srav (shift right arithmetic variable)
+					RegFile[valsR.rd] = (int32_t)RegFile[valsR.rt] >> RegFile[valsR.rs];
+					break;					
+
+
+
+			  ////////////////////////////
+			 /*R TYPE JUMP INSTRUCTIONS*/
+			////////////////////////////
+
+	
+				case 0b001000: // jr (Jump Register)
+					//jump to address specified by rs
+					ProgramCounter = RegFile[valsR.rs]; 
+					break;
+	
+				case 0b001001: // jalr (Jump and Link Register)
+					RegFile[31] = ProgramCounter + 4; // Save address of next instruction into RA
+					 // Jump to address specified by rs
+					ProgramCounter = RegFile[valsR.rs];
+					break;					
+					
+
+
+
+
+			} //end of R type switch
+		}//end of R type if statement  (if opcode 000000)
+
+			
+			
+	  ///////////////////////////
+	 /*I TYPE ALU INSTRUCTIONS*/
+	///////////////////////////
+		
+		
+		if (opcode == 0b001001){ //add immediate unsigned
 			//rt = rs + immediate
 			RegFile[valsI.rt] = RegFile[valsI.rs] + valsI.imm;
-		} if (opcode == 0b001000){ //add immediate (signed)
-			printf("ADDI\n");
-			valsI = readTypeI(CurrentInstruction);
+		}
+
+		if (opcode == 0b001000){ //add immediate (signed)
 			//Sign extension
-			rs_signed = (int32_t)RegFile[valsI.rs];  
-			imm_signed = (int32_t)(int16_t)valsI.imm;  
-			result = rs_signed + imm_signed;
+			int32_t rs_signed = (int32_t)RegFile[valsI.rs];  
+			int32_t imm_signed = (int32_t)(int16_t)valsI.imm;  
+			int32_t result = rs_signed + imm_signed;
+			//rt = rs + immediate
     		RegFile[valsI.rt] = (uint32_t)result;
-		} if (opcode == 0b100010) { //subtract
-			valsR = readTypeR(CurrentInstruction); 
-			// Sign extension
-			rs_signed = (int32_t)RegFile[valsR.rs];  
-			rt_signed = (int32_t)RegFile[valsR.rt];  
-			result = rs_signed - rt_signed;    
-			//rd = rs - rt   
-			RegFile[valsR.rd] = (uint32_t)result;        
-		} if (opcode == 0b100011){ //subtract unsigned
-			valsR = readTypeR(CurrentInstruction);
-			// rd = rs - rt
-			RegFile[valsR.rd] = RegFile[valsR.rs] - RegFile[valsR.rt];	
-		} if (opcode == 0b100001){ //add unsigned
-			valsR = readTypeR(CurrentInstruction);
-			// rd = rs + rt
-			RegFile[valsR.rd] = RegFile[valsR.rs] + RegFile[valsR.rt];
-		} if (opcode ==0b100100){ //AND
-			valsR = readTypeR(CurrentInstruction); 
-			RegFile[valsR.rd] = RegFile[valsR.rs] & RegFile[valsR.rt];
-		} if (opcode == 0b100101) {//OR
-			valsR = readTypeR(CurrentInstruction);
-			RegFile[valsR.rd] = RegFile[valsR.rs] | RegFile[valsR.rt];
-		} if (opcode == 0b100110) { //XOR
-			valsR = readTypeR(CurrentInstruction);
-			RegFile[valsR.rd] = RegFile[valsR.rs] ^ RegFile[valsR.rt];
-		} if (opcode == 0b100111) { // NOR
-			valsR = readTypeR(CurrentInstruction);
-			RegFile[valsR.rd] = ~(RegFile[valsR.rs] | RegFile[valsR.rt]);
-		} if (opcode == 0b101010) { // Set Less Than (signed)
-			valsR = readTypeR(CurrentInstruction);
+		}
+
+		if (opcode == 0b001010){ //slti (set less than immediate)
 			//Sign extension
-			rs_signed = (int32_t)RegFile[valsR.rs];
-			rt_signed = (int32_t)RegFile[valsR.rt];
-			if (rs_signed < rt_signed) {
-				RegFile[valsR.rd] = 1;
-			} else {
-				RegFile[valsR.rd] = 0;
-			}
-		} if (opcode == 0b101011) { //sltu (Set Less than unsigned)
-			valsR = readTypeR(CurrentInstruction);
-			if (RegFile[valsR.rs] < RegFile[valsR.rt]){
-				RegFile[valsR.rd] = 1;
-			}else{
-				RegFile[valsR.rd] = 0;
-			}
-		} if (opcode == 0b001010){ //slti (set less than immediate)
-			valsI = readTypeI(CurrentInstruction);
-			//Sign extension
-			rs_signed = (int32_t)RegFile[valsI.rs];
-			imm_signed = (int32_t)(int16_t)valsI.imm;
+			int32_t rs_signed = (int32_t)RegFile[valsI.rs];
+			int32_t imm_signed = (int32_t)(int16_t)valsI.imm;
 			if (rs_signed < valsI.imm){
 				RegFile[valsI.rt] = 1;
 			}else{
 				RegFile[valsI.rt] = 0;
 			
 			}
-		} if (opcode == 0b001011) { //sltiu (Set Less than unsigned immediate)
-			valsI = readTypeI(CurrentInstruction);
+		}
+
+		if (opcode == 0b001011) { // sltiu (Set Less than unsigned immediate)
 			if (RegFile[valsI.rs] < valsI.imm){
 				RegFile[valsI.rt] = 1;
 			}else{
 				RegFile[valsI.rt] = 0;
 			}
-		} if (opcode == 0b001000) { //andi (And Immediate)
-			valsI = readTypeI(CurrentInstruction); 
+		}
+
+		if (opcode == 0b001000) { // andi (And Immediate)
 			// Zero-Extend to 32 bits
-			imm_ext = (int32_t)valsI.imm;
+			int32_t imm_ext = (int32_t)valsI.imm;
 			//rt is bitwise and between rs and immediate
 			RegFile[valsI.rt] = RegFile[valsI.rs] & imm_ext;
-		} if (opcode == 0b001101) { //ori (or Immediate)
-			valsI = readTypeI(CurrentInstruction); 
+		}
+
+		if (opcode == 0b001101) { // ori (or Immediate)
 			// Zero-Extend to 32 bits
-			imm_ext = (int32_t)valsI.imm;
+			int32_t imm_ext = (int32_t)valsI.imm;
 			//rt is bitwise or between rs and immediate
 			RegFile[valsI.rt] = RegFile[valsI.rs] | imm_ext;
-		} if (opcode == 0b001110) { //xori (exclusive or Immediate)
-			valsI = readTypeI(CurrentInstruction); 
+		}
+
+		if (opcode == 0b001110) { // xori (exclusive or Immediate) 
 			// Zero-Extend to 32 bits
-			imm_ext = (int32_t)valsI.imm;
+			int32_t imm_ext = (int32_t)valsI.imm;
 			//rt is bitwise xor between rs and immediate
 			RegFile[valsI.rt] = RegFile[valsI.rs] ^ imm_ext;
-		} if (opcode == 0b001111) { //lui (Load Upper Immediate)
-			valsI = readTypeI(CurrentInstruction); 
+		}
+
+		if (opcode == 0b001111) { // lui (Load Upper Immediate)
 			// Extract upper 16 bits of the immediate value and left-shift it by 16 bits
-			imm_upper = (valsI.imm & 0xFFFF) << 16;
+			uint32_t imm_upper = (valsI.imm & 0xFFFF) << 16;
 			RegFile[valsI.rt] = imm_upper;
 		}
 
-		// R TYPE INSTRUCTIONS
-		if (opcode == 0b000000)
-		{
-			valsR = readTypeR(CurrentInstruction);
-			switch (valsR.funct)
-			{
-				// ALU INSTRUCTIONS
-                case 0b100000: //add
-                    rs_signed = (int32_t)RegFile[valsR.rs];  
-                    rt_signed = (int32_t)RegFile[valsR.rt];  
-                    //rd = rs + rt
-                    result = rs_signed + rt_signed;      
-                    RegFile[valsR.rd] = (uint32_t)result;  
-                    break;
-                case 0b100010: //subtract
-                    // Sign extension
-                    rs_signed = (int32_t)RegFile[valsR.rs];  
-                    rt_signed = (int32_t)RegFile[valsR.rt];  
-                    result = rs_signed - rt_signed;    
-                    //rd = rs - rt  
-                    RegFile[valsR.rd] = (uint32_t)result;
-                    break;
-                case 0b100011: //subtract unsigned
-                    // rd = rs - rt
-                    RegFile[valsR.rd] = RegFile[valsR.rs] - RegFile[valsR.rt];
-                    break;
-                case 0b100001: //add unsigned
-                    // rd = rs + rt
-                    RegFile[valsR.rd] = RegFile[valsR.rs] + RegFile[valsR.rt];
-                    break;
-                case 0b100100://AND
-                    RegFile[valsR.rd] = RegFile[valsR.rs] & RegFile[valsR.rt];
-                    break;
-                case 0b100101://OR
-                    RegFile[valsR.rd] = RegFile[valsR.rs] | RegFile[valsR.rt];
-                    break;      
-                case 0b100110: //XOR (exclusive or)
-                    //rd is bitwise xor of rs and rt
-                    RegFile[valsR.rd] = RegFile[valsR.rs] ^ RegFile[valsR.rt];
-                    break;
-                case 0b100111: // NOR
-                    //rd is bitwise nor of rs and rt
-                    RegFile[valsR.rd] = ~(RegFile[valsR.rs] | RegFile[valsR.rt]);
-                    break;
-                case 0b101010: // Set Less Than (signed)
-                    //Sign extension
-                    rs_signed = (int32_t)RegFile[valsR.rs];
-                    rt_signed = (int32_t)RegFile[valsR.rt];
-                    if (rs_signed < rt_signed) {
-                        RegFile[valsR.rd] = 1;
-                    } else {
-                        RegFile[valsR.rd] = 0;
-                    }
-                    break;
-                case 0b101011: // Set Less Than (unsigned)
-                    if (RegFile[valsR.rs] < RegFile[valsR.rt]){
-                        RegFile[valsR.rd] = 1;
-                    }else{
-                        RegFile[valsR.rd] = 0;
-                    }
-                    break;
 
-				// SHIFT INSTRUCTIONS
-                case 0b000000: //sll (shift left logical)
-                    RegFile[valsR.rd] = RegFile[valsR.rt] << valsR.shamt;
-                    break;
-                case 0b000010: //srl (shift right logical)
-                    RegFile[valsR.rd] = RegFile[valsR.rt] >> valsR.shamt;
-                    break;
-                case 0b000011: //sra (shift right arithmetic)
-                    RegFile[valsR.rd] = (int32_t)RegFile[valsR.rt] >> valsR.shamt;
-                    break;
-                case 0b000100: //sllv (shift left logical variable)
-                    RegFile[valsR.rd] = RegFile[valsR.rt] >> RegFile[valsR.rs];
-                    break;
-                case 0b000110: // srlv (shift right logical variable)
-                    RegFile[valsR.rd] = RegFile[valsR.rt] >> RegFile[valsR.rs];
-                    break;
-                case 0b000111: // srav (shift right arithmetic variable)
-                    RegFile[valsR.rd] = (int32_t)RegFile[valsR.rt] >> RegFile[valsR.rs];
-                    break;                  
 
-				// MULT/DIV INSTRUCTIONS
-				case 0b010000: // mfhi (Move from HI)
-					RegFile[valsR.rd] = RegFile[32];
-					break;
-				case 0b010010: // mflo (Move from LO)
-					RegFile[valsR.rd] = RegFile[33];
-					break;
-				case 0b010001 : // mthi (Move to HI)
-					RegFile[32] = RegFile[valsR.rs];
-					break;
-				case 0b010011 : // mtlo (Move to LO)
-					RegFile[33] = RegFile[valsR.rs];
-					break;
-				case 0b011000: // mult (Multiply)
-					result64 = (int64_t)((int32_t)RegFile[valsR.rs]) * (int64_t)((int32_t)RegFile[valsR.rt]);
-					RegFile[32] = (uint32_t)(result64 >> 32);
-					RegFile[33] = (uint32_t)(result64 & 0xFFFFFFFF);
-					break;
-				case 0b011001: // multu (Multiply unsigned)
-					result64 = (uint64_t)RegFile[valsR.rs] * (uint64_t)RegFile[valsR.rt];
-					RegFile[32] = (uint32_t)(result64 >> 32);
-					RegFile[33] = (uint32_t)(result64 & 0xFFFFFFFF);
-					break;
-				case 0b011010: // div (Divide)
-					rs_signed = (int32_t)RegFile[valsR.rs];
-					rt_signed = (int32_t)RegFile[valsR.rt];
-					if (rt_signed != 0)
-					{
-						RegFile[32] = (uint32_t)(rs_signed / rt_signed);
-						RegFile[33] = (uint32_t)(rs_signed % rt_signed);
+	  //////////////////////////////
+	 /*I TYPE BRANCH INSTRUCTIONS*/
+	//////////////////////////////
+
+
+		 if (opcode == 0b00001){ // for all I type instructions with opcode 000001
+
+
+			switch(valsI.rt) 
+			{			
+				case 0b000000: //BLTZ (Branch if Less Than Zero)
+					if (RegFile[valsI.rs] < 0){
+						//sign extension
+						int32_t offset = (int32_t)valsI.imm; 						//<><><><><><><><><><><><><><><><><><><><><
+						ProgramCounter += 4 + (offset << 2);                        //MIGHT HAVE TO DEFINE "offset" ELSEWHERE
 					}
 					break;
-				case 0b011011: // divu (Divide unsigned)
-					if (RegFile[valsR.rt] != 0)
-					{
-						RegFile[32] = RegFile[valsR.rs] / RegFile[valsR.rt];
-						RegFile[33] = RegFile[valsR.rs] % RegFile[valsR.rt];
+
+				case 0b000001: // BGEZ (Branch if Greater Than or Equal to Zero)
+					if ((int32_t)RegFile[valsI.rs] >= 0) {
+						// Sign extension
+						int32_t offset = (int32_t)valsI.imm;
+						ProgramCounter += 4 + (offset << 2); // Calculate branch target address
 					}
 					break;
-				default:
+
+				case 0b010000: //BLTZAL (Branch on Less Than Zero and Link)
+					if (RegFile[valsI.rs] < 0){
+						// Save the return address in register $31 (RA)
+						RegFile[31] = ProgramCounter + 4;
+						//sign extension
+						int32_t offset = (int32_t)valsI.imm;
+						ProgramCounter += 4 + (offset << 2);                        
+					}
 					break;
+
+				case 0b010001: //BGEZAL (Branch on Greater Than or Equal to Zero and Link)
+					if ((int32_t)RegFile[valsI.rs] >= 0) {
+						// Save the return address in register $31 (RA)
+						RegFile[31] = ProgramCounter + 4;
+						//sign extension
+						int32_t offset = (int32_t)valsI.imm;
+						ProgramCounter += 4 + (offset << 2);                       
+					}
+					break;
+			}//end of switch
+		 }//end of if opcode==00001
+
+		if (opcode == 0b000100){//BEQ (branch on equal)
+			if (RegFile[valsI.rs] == RegFile[valsI.rt]){
+				//sign extension on offset
+				int32_t offset = (int32_t)valsI.imm;
+				ProgramCounter += 4 + (offset << 2);
+			}
+		} 
+		if (opcode == 0b000101){//BNE (branch on not equal)
+			if (RegFile[valsI.rs] != RegFile[valsI.rt]){
+				//sign extension on offset
+				int32_t offset = (int32_t)valsI.imm;
+				ProgramCounter += 4 + (offset << 2);
+			}
+		} 
+		if (opcode == 0b000110) { // BLEZ (branch on less than or equal to zero)
+    		if (RegFile[valsI.rs] <= 0) {
+				// Sign extension on offset
+				int32_t offset = (int32_t)valsI.imm;
+				ProgramCounter += 4 + (offset << 2);
+			}
+		}
+		if (opcode == 0b000111) { // BGTZ (branch on greater than zero)
+			if (RegFile[valsI.rs] > 0) {
+				// Sign extension on offset
+				int32_t offset = (int32_t)valsI.imm;
+				ProgramCounter += 4 + (offset << 2);
 			}
 		}
 
-		RegFile[0] = 0;
 
-	}   
+	  ///////////////////////
+	 /*J Type INSTRUCTIONS*/
+	///////////////////////
 
+		if (opcode == 0b000010){ // J (jump)
+			//concatenate the first 4 bits of the current PC with the lower 26 bits of target address.
+			//The last two bits of the address can be assumed to be 0 since instructions are word-aligned
+			ProgramCounter = (ProgramCounter & 0xF0000000) | (valsJ.target_address << 2);
+		}
+		if (opcode == 0b000011) { // jal (jump and link)
+			// Store the return address (address of the next instruction) in register $ra (31)
+			RegFile[31] = ProgramCounter + 4; 
+			
+			// Jump to the target address
+			ProgramCounter = (ProgramCounter & 0xF0000000) | (valsJ.target_address << 2);
+		}
+
+
+
+
+		RegFile[0] = 0;	   
+	}//end of instruction loop
 
 	//Close file pointers & free allocated Memory
 	closeFDT();
@@ -367,24 +442,25 @@ int main(int argc, char * argv[]) {
 
 	return 0;
 
-}
+
+}//end of main
 
 //Function Definitions
 TypeI readTypeI(uint32_t instruction) {
     TypeI result;
-	result.rs = (instruction << 6) >> 27;
-	result.rt = (instruction << 11) >> 27;
-	result.imm = (instruction << 16) >> 16;	
+    result.rs = (instruction >> 21) & 0x1F;
+    result.rt = (instruction >> 16) & 0x1F;
+    result.imm = instruction & 0xFFFF;
     return result;
 }
 
 TypeR readTypeR(uint32_t instruction) {
     TypeR result;
-	result.rs = (instruction << 6) >> 27;
-	result.rt = (instruction << 11) >> 27;
-	result.rd = (instruction << 16) >> 27;
-	result.shamt = (instruction << 21) >> 27;
-	result.funct = (instruction << 26) >> 26;
+    result.rs = (instruction >> 21) & 0x1F;
+    result.rt = (instruction >> 16) & 0x1F;
+    result.rd = (instruction >> 11) & 0x1F;
+    result.shamt = (instruction >> 6) & 0x1F;
+    result.funct = instruction & 0x3F;
     return result;
 }
 
