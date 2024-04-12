@@ -141,11 +141,8 @@ int main(int argc, char * argv[]) {
 			{
 				// ALU Instructions //
 				case 0b100000: //add
-					rs_signed = (int32_t)RegFile[valsR.rs];  
-					rt_signed = (int32_t)RegFile[valsR.rt];  
-					//rd = rs + rt
-					result = rs_signed + rt_signed;       
-					RegFile[valsR.rd] = (uint32_t)result;   
+					printf("ADD: %d + %d\n", RegFile[valsR.rs], RegFile[valsR.rt]);     
+					RegFile[valsR.rd] = RegFile[valsR.rs] + RegFile[valsR.rt];   
 					break;
 				case 0b100010: //subtract
 					// Sign extension
@@ -243,15 +240,15 @@ int main(int argc, char * argv[]) {
 					rt_signed = (int32_t)RegFile[valsR.rt];
 					if (rt_signed != 0)
 					{
-						RegFile[32] = (uint32_t)(rs_signed / rt_signed);
-						RegFile[33] = (uint32_t)(rs_signed % rt_signed);
+						RegFile[33] = (uint32_t)(rs_signed / rt_signed);
+						RegFile[32] = (uint32_t)(rs_signed % rt_signed);
 					}
 					break;
 				case 0b011011: // divu (Divide unsigned)
 					if (RegFile[valsR.rt] != 0)
 					{
-						RegFile[32] = RegFile[valsR.rs] / RegFile[valsR.rt];
-						RegFile[33] = RegFile[valsR.rs] % RegFile[valsR.rt];
+						RegFile[33] = RegFile[valsR.rs] / RegFile[valsR.rt];
+						RegFile[32] = RegFile[valsR.rs] % RegFile[valsR.rt];
 					}
 
 			  	// Jump Instructions //
@@ -274,12 +271,7 @@ int main(int argc, char * argv[]) {
 			//rt = rs + immediate
 			RegFile[valsI.rt] = RegFile[valsI.rs] + valsI.imm;
 		} if (opcode == 0b001000){ //add immediate (signed)
-			//Sign extension
-			rs_signed = (int32_t)RegFile[valsI.rs];  
-			imm_signed = (int32_t)(int16_t)valsI.imm;  
-			result = rs_signed + imm_signed;
-			//rt = rs + immediate
-    		RegFile[valsI.rt] = (uint32_t)result;
+			RegFile[valsI.rs] = RegFile[valsI.rt] + valsI.imm;
 		} if (opcode == 0b001010){ //slti (set less than immediate)
 			//Sign extension
 			rs_signed = (int32_t)RegFile[valsI.rs];
@@ -395,8 +387,8 @@ int main(int argc, char * argv[]) {
 			ProgramCounter = (ProgramCounter & 0xF0000000) | (valsJ.target_address << 2);
 		}
 
-
-		RegFile[0] = 0;	   
+		RegFile[0] = 0;	  
+		ProgramCounter += 4; // Increment the program counter to the next instruction 
 	}
 
 	//Close file pointers & free allocated Memory
