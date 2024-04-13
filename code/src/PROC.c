@@ -122,6 +122,7 @@ int main(int argc, char * argv[]) {
 
 		//FETCH THE INSTRUCTION AT 'ProgramCounter'		
 		CurrentInstruction = readWord(ProgramCounter,false);
+		printf("Instruction: 0x%08x\n", CurrentInstruction);
 
 		//PRINT CONTENTS OF THE REGISTER FILE	
 		printRegFile();
@@ -309,15 +310,42 @@ int main(int argc, char * argv[]) {
 			RegFile[valsI.rt] = imm_upper;
 		}
 
+		// Load and Store Instructions //
+		if (opcode == 0b100000) { // lb (Load Byte)
+			RegFile[valsI.rt] = readByte(RegFile[valsI.rs] + valsI.imm, false);
+		} if (opcode == 0b100001) { // lh (Load Halfword)
+			RegFile[valsI.rt] = readWord(RegFile[valsI.rs] + valsI.imm, false);     // might not work
+		} if (opcode == 0b100010) { // lwl (Load Word Left)
+			RegFile[valsI.rt] = readWord(RegFile[valsI.rs] + valsI.imm, false);
+		} if (opcode == 0b100110) { // lwr (Load Word Right)
+			RegFile[valsI.rt] = readWord(RegFile[valsI.rs] + valsI.imm, false);
+		} if (opcode == 0b100011) { // lw (Load Word)
+			RegFile[valsI.rt] = readWord(RegFile[valsI.rs] + valsI.imm, false);
+		} if (opcode == 0b100100) { // lbu (Load Byte Unsigned)
+			RegFile[valsI.rt] = readByte(RegFile[valsI.rs] + valsI.imm, false);
+		} if (opcode == 0b100101) { // lhu (Load Halfword Unsigned)
+			RegFile[valsI.rt] = readWord(RegFile[valsI.rs] + valsI.imm, false);     // might not work
+		} if (opcode == 0b101000) { // sb (Store Byte)
+			writeByte(RegFile[valsI.rs] + valsI.imm, RegFile[valsI.rt], false);
+		} if (opcode == 0b101001) { // sh (Store Halfword)
+			writeWord(RegFile[valsI.rs] + valsI.imm, RegFile[valsI.rt], false);     // might not work
+		} if (opcode == 0b101011) { // sw (Store Word)
+			writeWord(RegFile[valsI.rs] + valsI.imm, RegFile[valsI.rt], false);
+		} if (opcode == 0b101010) { // swl (Store Word Left)
+			writeWord(RegFile[valsI.rs] + valsI.imm, RegFile[valsI.rt], false);
+		} if (opcode == 0b101110) { // swr (Store Word Right)
+			writeWord(RegFile[valsI.rs] + valsI.imm, RegFile[valsI.rt], false);
+		}
+
 		// Branch Instructions //
-		 if (opcode == 0b00001){ // for all I type instructions with opcode 000001
+		if (opcode == 0b00001){ // for all I type instructions with opcode 000001
 			switch(valsI.rt) 
 			{			
 				case 0b000000: //BLTZ (Branch if Less Than Zero)
 					if (RegFile[valsI.rs] < 0){
 						//sign extension
-						offset = (int32_t)valsI.imm; 						//<><><><><><><><><><><><><><><><><><><><><
-						ProgramCounter += 4 + (offset << 2);                        //MIGHT HAVE TO DEFINE "offset" ELSEWHERE
+						offset = (int32_t)valsI.imm;
+						ProgramCounter += 4 + (offset << 2);
 					}
 					break;
 				case 0b000001: // BGEZ (Branch if Greater Than or Equal to Zero)
@@ -385,6 +413,17 @@ int main(int argc, char * argv[]) {
 			
 			// Jump to the target address
 			ProgramCounter = (ProgramCounter & 0xF0000000) | (valsJ.target_address << 2);
+		}
+
+		// Exception Instructions //
+		if (opcode == 0b000000) { // syscall and exception
+			uint32_t code = CurrentInstruction & 0x3FFFFC0;
+			uint32_t brk = CurrentInstruction & 0x03F;
+			if (brk == 0b001100) { // syscall
+				syscall();
+			} if (brk == 0b001101) { // break
+				break;
+			}
 		}
 
 		RegFile[0] = 0;	  
