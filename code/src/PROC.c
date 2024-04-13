@@ -120,6 +120,18 @@ int main(int argc, char * argv[]) {
 	int i;
 	for(i = 0; i < MaxInstructions; i++) {
 
+	uint32_t result = 0;
+	uint64_t result64 = 0;
+    int32_t rs_signed=0;
+    int32_t rt_signed=0;
+	int32_t imm_signed=0;
+	int32_t imm_ext=0;
+	uint32_t imm_upper=0;
+	int32_t offset=0;
+	TypeR valsR = {0,0,0,0,0};
+	TypeI valsI = {0,0,0};
+	TypeJ valsJ = {0};
+
 		//FETCH THE INSTRUCTION AT 'ProgramCounter'		
 		CurrentInstruction = readWord(ProgramCounter,false);
 		printf("Instruction: 0x%08x\n", CurrentInstruction);
@@ -221,10 +233,10 @@ int main(int argc, char * argv[]) {
 					RegFile[valsR.rd] = RegFile[33];
 					break;
 				case 0b010001 : // mthi (Move to HI)
-					RegFile[32] = RegFile[valsR.rs];
+					RegFile[33] = RegFile[valsR.rs];
 					break;
 				case 0b010011 : // mtlo (Move to LO)
-					RegFile[33] = RegFile[valsR.rs];
+					RegFile[32] = RegFile[valsR.rs];
 					break;
 				case 0b011000: // mult (Multiply)
 					result64 = (int64_t)((int32_t)RegFile[valsR.rs]) * (int64_t)((int32_t)RegFile[valsR.rt]);
@@ -269,10 +281,13 @@ int main(int argc, char * argv[]) {
 
 	    // I type ALU instructions //
 		if (opcode == 0b001001){ //add immediate unsigned
+			printf("ADDIU: %d + %d\n", RegFile[valsI.rs], valsI.imm);
 			//rt = rs + immediate
-			RegFile[valsI.rt] = RegFile[valsI.rs] + valsI.imm;
+			RegFile[valsI.rt] = RegFile[valsI.rs] + (int16_t)valsI.imm;
 		} if (opcode == 0b001000){ //add immediate (signed)
-			RegFile[valsI.rs] = RegFile[valsI.rt] + valsI.imm;
+			imm_signed = (int32_t)(int16_t)valsI.imm;
+    		// Perform addition with sign-extended immediate value
+    		RegFile[valsI.rs] = RegFile[valsI.rt] + imm_signed;
 		} if (opcode == 0b001010){ //slti (set less than immediate)
 			//Sign extension
 			rs_signed = (int32_t)RegFile[valsI.rs];
@@ -311,6 +326,7 @@ int main(int argc, char * argv[]) {
 		}
 
 		// Load and Store Instructions //
+		printf("Opcode: %d\n", opcode);
 		if (opcode == 0b100000) { // lb (Load Byte)
 			RegFile[valsI.rt] = readByte(RegFile[valsI.rs] + valsI.imm, false);
 		} if (opcode == 0b100001) { // lh (Load Halfword)
@@ -320,7 +336,8 @@ int main(int argc, char * argv[]) {
 		} if (opcode == 0b100110) { // lwr (Load Word Right)
 			RegFile[valsI.rt] = readWord(RegFile[valsI.rs] + valsI.imm, false);
 		} if (opcode == 0b100011) { // lw (Load Word)
-			RegFile[valsI.rt] = readWord(RegFile[valsI.rs] + valsI.imm, false);
+			printf("Load Word into %d: %d + %d\n", valsI.rt, RegFile[valsI.rs], valsI.imm);
+			RegFile[valsI.rt] = readWord((uint32_t)(RegFile[valsI.rs] + valsI.imm), false);
 		} if (opcode == 0b100100) { // lbu (Load Byte Unsigned)
 			RegFile[valsI.rt] = readByte(RegFile[valsI.rs] + valsI.imm, false);
 		} if (opcode == 0b100101) { // lhu (Load Halfword Unsigned)
@@ -442,9 +459,9 @@ int main(int argc, char * argv[]) {
 //Function Definitions
 TypeI readTypeI(uint32_t instruction) {
     TypeI result;
-    result.rs = (instruction >> 21) & 0x1F;
-    result.rt = (instruction >> 16) & 0x1F;
-    result.imm = instruction & 0xFFFF;
+    result.rs = (instruction << 6) >> 27;
+    result.rt = (instruction << 11) >> 27;
+    result.imm = (instruction << 16) >> 16;
     return result;
 }
 
